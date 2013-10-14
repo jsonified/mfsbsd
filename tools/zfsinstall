@@ -22,7 +22,7 @@ help() {
 	echo "-p pool_name      : specify a name for the ZFS pool (default: tank)"
 	echo "-V pool_version   : specify a version number for ZFS pool (default: 13)"
 	echo "-m mount_point    : use this mount point for operations (default: /mnt)"
-	echo "-c                : enable lzjb compression for all datasets"
+	echo "-c                : enable lzjb or lz4 compression for all datasets"
 	echo "-l                : use legacy mounts (via fstab) instead of ZFS mounts"
 	echo "-4                : use fletcher4 as default checksum algorithm"
 	echo "-n                : disable zfs access time updates (noatime)"
@@ -48,7 +48,7 @@ while getopts d:u:t:r:p:s:z:m:V:hcl4n o; do
 		r) RAID="${OPTARG}" ;;
 		z) ZPART="${OPTARG}" ;;
 		V) VERSION="${OPTARG}" ;;
-		c) LZJB=1 ;;
+		c) COMPRESSION=1 ;;
 		l) LEGACY=1 ;;
 		4) FLETCHER=1 ;;
 		n) NOATIME=1 ;;
@@ -109,6 +109,13 @@ if [ -n "${EXPOOLS}" ]; then
 			exit 1
 		fi
 	done
+fi
+
+# lz4 compression arrives in 28 and higher with extended functionality
+if [ "$ZFS_VERSION" -lt "28" ]; then
+        COMPRESSION_TYPE="lzjb"
+else
+        COMPRESSION_TYPE="lz4"
 fi
 
 COUNT=`echo ${DEVS} | /usr/bin/wc -w | /usr/bin/awk '{ print $1 }'`
@@ -275,9 +282,9 @@ if [ "${FLETCHER}" = "1" ]; then
 	echo " done"
 fi
 
-if [ "${LZJB}" = "1" ]; then
-	echo -n "Setting default compression to lzjb for ${POOL} ..."
-	if ! /sbin/zfs set compression=lzjb ${POOL} > /dev/null 2> /dev/null; then
+if [ "${COMPRESSION}" = "1" ]; then
+	echo -n "Setting default compression to ${COMPRESSION_TYPE} for ${POOL} ..."
+	if ! /sbin/zfs set compression=${COMPRESSION_TYPE} ${POOL} > /dev/null 2> /dev/null; then
 		echo " error"
 		exit 1
 	fi
