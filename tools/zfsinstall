@@ -4,10 +4,11 @@
 # mfsBSD ZFS install script
 # Copyright (c) 2011-2013 Martin Matuska <mm at FreeBSD.org>
 #
-FS_LIST="var tmp"
+FS_LIST="var tmp var/tmp var/log var/audit usr usr/home usr/jails usr/obj usr/ports usr/ports/distfiles usr/src"
+FS_DONT_MOUNT_LIST="var usr"
 
 usage() {
-	echo "Usage: $0 [-h] -d geom_provider [-d geom_provider ...] -u dist_url [-r mirror|raidz] [-m mount_point] [-p zfs_pool_name] [-V zfs_pool_version] [-s swap_partition_size] [-z zfs_partition_size] [-c] [-l] [-4]"
+	echo "Usage: $0 [-h] -d geom_provider [-d geom_provider ...] -u dist_url [-r mirror|raidz] [-m mount_point] [-p zfs_pool_name] [-V zfs_pool_version] [-s swap_partition_size] [-z zfs_partition_size] [-c] [-l] [-4] [-n] [-a]"
 }
 
 help() {
@@ -22,9 +23,11 @@ help() {
 	echo "-p pool_name      : specify a name for the ZFS pool (default: tank)"
 	echo "-V pool_version   : specify a version number for ZFS pool (default: 13)"
 	echo "-m mount_point    : use this mount point for operations (default: /mnt)"
-	echo "-c                : enable lzjb compression for all datasets"
+	echo "-c                : enable lzjb or lz4 compression for all datasets"
 	echo "-l                : use legacy mounts (via fstab) instead of ZFS mounts"
 	echo "-4                : use fletcher4 as default checksum algorithm"
+	echo "-n                : disable zfs access time updates (noatime)"
+	echo "-a                : ensure partitions are aligned to 4K blocks"
 	echo; echo "Examples:"
 	echo "Install on a single drive with 2GB swap:"
 	echo "$0 -u /path/to/release -d da0 -s 2G"
@@ -36,7 +39,7 @@ help() {
 	echo "You can enable all swap partitions and/or make a gmirror-ed swap later."
 }
 
-while getopts d:u:t:r:p:s:z:m:V:hcl4 o; do
+while getopts d:u:t:r:p:s:z:m:V:hcl4na o; do
 	case "$o" in
         	d) DEVS="$DEVS ${OPTARG##/dev/}" ;;
 		u) URL="${OPTARG}" ;;
@@ -47,9 +50,11 @@ while getopts d:u:t:r:p:s:z:m:V:hcl4 o; do
 		r) RAID="${OPTARG}" ;;
 		z) ZPART="${OPTARG}" ;;
 		V) VERSION="${OPTARG}" ;;
-		c) LZJB=1 ;;
+		c) COMPRESSION=1 ;;
 		l) LEGACY=1 ;;
+		a) ALIGNMENT=1 ;;
 		4) FLETCHER=1 ;;
+		n) NOATIME=1 ;;
 		h) help; exit 1;;
 		[?]) usage; exit 1;;
 esac
@@ -107,6 +112,22 @@ if [ -n "${EXPOOLS}" ]; then
 			exit 1
 		fi
 	done
+fi
+
+# lz4 compression arrives in 28 and higher with extended functionality
+if [ "$ZFS_VERSION" -lt "28" ]; then
+        COMPRESSION_TYPE="lzjb"
+else
+        COMPRESSION_TYPE="lz4"
+fi
+
+# 4k block alignment arrives in 28 and higher
+if [ "$ZFS_VERSION" -lt "28" ]; then
+        ALIGNMENT=""
+        ASHIFT=""
+elif [ "$ALIGNMENT" = "1" ]; then
+        ALIGNMENT="-a 4k"
+        ASHIFT="-o ashift=12"
 fi
 
 COUNT=`echo ${DEVS} | /usr/bin/wc -w | /usr/bin/awk '{ print $1 }'`
@@ -205,12 +226,12 @@ for DEV in ${DEVS}; do
 		echo " error"
 		exit 1
 	fi
-	if ! /sbin/gpart add -t freebsd-boot -s 128 ${DEV} > /dev/null; then
+	if ! /sbin/gpart add -t freebsd-boot -b 40 -s 1024 ${DEV} > /dev/null; then
 		echo " error"
 		exit 1
 	fi
 	if [ -n "${SWAP}" ]; then
-		if ! /sbin/gpart add -t freebsd-swap -s "${SWAP}" ${DEV} > /dev/null; then
+		if ! /sbin/gpart add -t freebsd-swap ${ALIGNMENT} -s "${SWAP}" ${DEV} > /dev/null; then
 			echo " error"
 			exit 1
 		fi
@@ -222,7 +243,7 @@ for DEV in ${DEVS}; do
 			FSWAP=${SWAPPART}
 		fi
 	fi
-	if ! /sbin/gpart add -t freebsd-zfs ${SZPART} ${DEV} > /dev/null; then
+	if ! /sbin/gpart add -t freebsd-zfs ${ALIGNMENT} ${SZPART} ${DEV} > /dev/null; then
 		echo " error"
 		exit 1
 	fi
@@ -254,7 +275,12 @@ for DEV in ${DEVS}; do
 	GPART=`/sbin/glabel list ${DEV}p${PART} | /usr/bin/grep gptid | /usr/bin/awk -F"gptid/" '{ print "gptid/" $2 }'`
 
 	GPARTS="${GPARTS} ${GPART}"
-	PARTS="${PARTS} ${DEV}p${PART}"
+        if [ -z "${ALIGNMENT}" ]; then
+                PARTS="${PARTS} ${DEV}p${PART}"
+        else
+		/sbin/gnop create -S 4096 ${DEV}p${PART} > /dev/null 2> /dev/null
+                PARTS="${PARTS} ${DEV}p${PART}.nop"
+        fi
 done
 
 echo -n "Creating ZFS pool ${POOL} on${PARTS} ..."
@@ -273,9 +299,18 @@ if [ "${FLETCHER}" = "1" ]; then
 	echo " done"
 fi
 
-if [ "${LZJB}" = "1" ]; then
-	echo -n "Setting default compression to lzjb for ${POOL} ..."
-	if ! /sbin/zfs set compression=lzjb ${POOL} > /dev/null 2> /dev/null; then
+if [ "${COMPRESSION}" = "1" ]; then
+	echo -n "Setting default compression to ${COMPRESSION_TYPE} for ${POOL} ..."
+	if ! /sbin/zfs set compression=${COMPRESSION_TYPE} ${POOL} > /dev/null 2> /dev/null; then
+		echo " error"
+		exit 1
+	fi
+	echo " done"
+fi
+
+if [ "${NOATIME}" = "1" ]; then
+	echo -n "Disabling atime updates for ${POOL} ..."
+	if ! /sbin/zfs set atime=off ${POOL} > /dev/null 2> /dev/null; then
 		echo " error"
 		exit 1
 	fi
@@ -327,6 +362,29 @@ if [ "${LEGACY}" = "1" ]; then
 	done
 echo " done"
 fi
+
+# zfs /usr and /var are not mounted to avoid shadowing existing filesystems
+if [ "${LEGACY}" != "1" ]; then
+	echo -n "Set canmount=off for ${FS_DONT_MOUNT_LIST} ..."
+	for FS in ${FS_DONT_MOUNT_LIST}; do
+		if ! /sbin/zfs set canmount=off ${POOL}/root/${FS}> /dev/null 2> /dev/null; then
+			echo " error setting canmount=off on ${POOL}/root/${FS}"
+			exit 1
+		fi
+		if ! /sbin/zfs rename ${POOL}/root/${FS} ${POOL}/${FS}> /dev/null 2> /dev/null; then
+			echo " error renaming filesystem ${POOL}/root/${FS} to ${POOL}/${FS}"
+			exit 1
+		fi
+		if ! /sbin/zfs set mountpoint=/${FS} ${POOL}/${FS}> /dev/null 2> /dev/null; then
+			echo " error setting filesystem ${POOL}/${FS} mountpoint to /${FS}"
+			exit 1
+		fi
+	done
+fi
+echo " done"
+
+# finally list zfs mountpoints
+/sbin/zfs list -r ${POOL}
 
 echo -n "Extracting FreeBSD distribution ..."
 for file in ${EXTRACT_FILES}; do
