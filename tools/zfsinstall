@@ -4,11 +4,11 @@
 # mfsBSD ZFS install script
 # Copyright (c) 2011-2013 Martin Matuska <mm at FreeBSD.org>
 #
-FS_LIST="var tmp var/tmp var/log var/audit usr usr/home usr/jails usr/obj usr/ports usr/ports/distfiles usr/src"
-FS_DONT_MOUNT_LIST="var usr"
+FS_LIST="tmp usr usr/home usr/local usr/ports usr/src var var/audit var/crash var/empty var/log var/mail var/tmp"
+FS_DONT_MOUNT_LIST="var usr ROOT"
 
 usage() {
-	echo "Usage: $0 [-h] -d geom_provider [-d geom_provider ...] -u dist_url [-r mirror|raidz] [-m mount_point] [-p zfs_pool_name] [-V zfs_pool_version] [-s swap_partition_size] [-z zfs_partition_size] [-c] [-l] [-4] [-n] [-a]"
+	echo "Usage: $0 [-h] -d geom_provider [-d geom_provider ...] -u dist_url [-r mirror|raidz] [-m mount_point] [-p zfs_pool_name] [-V zfs_pool_version] [-s swap_partition_size] [-z zfs_partition_size] [-c] [-l] [-x] [-n] [-a]"
 }
 
 help() {
@@ -25,7 +25,7 @@ help() {
 	echo "-m mount_point    : use this mount point for operations (default: /mnt)"
 	echo "-c                : enable lzjb or lz4 compression for all datasets"
 	echo "-l                : use legacy mounts (via fstab) instead of ZFS mounts"
-	echo "-4                : use fletcher4 as default checksum algorithm"
+	echo "-x                : use sha256 as default checksum algorithm"
 	echo "-n                : disable zfs access time updates (noatime)"
 	echo "-a                : ensure partitions are aligned to 4K blocks"
 	echo; echo "Examples:"
@@ -39,7 +39,7 @@ help() {
 	echo "You can enable all swap partitions and/or make a gmirror-ed swap later."
 }
 
-while getopts d:u:t:r:p:s:z:m:V:hcl4na o; do
+while getopts d:u:t:r:p:s:z:m:V:hclxna o; do
 	case "$o" in
         	d) DEVS="$DEVS ${OPTARG##/dev/}" ;;
 		u) URL="${OPTARG}" ;;
@@ -53,7 +53,7 @@ while getopts d:u:t:r:p:s:z:m:V:hcl4na o; do
 		c) COMPRESSION=1 ;;
 		l) LEGACY=1 ;;
 		a) ALIGNMENT=1 ;;
-		4) FLETCHER=1 ;;
+		x) SHAHASH=1 ;;
 		n) NOATIME=1 ;;
 		h) help; exit 1;;
 		[?]) usage; exit 1;;
@@ -168,15 +168,15 @@ if [ -z "${URL}" ]; then
 	fi
 else
 	if [ -d "${URL}" ]; then
-		for file in base.txz kernel.txz; do
+		for file in base.txz kernel.txz doc.txz; do
 			if ! [ -f "${URL}/${file}" ]; then
 				echo "File not found: ${URL}/${file}"
 				exit 1
 			fi
 		done
-		EXTRACT_FILES="${URL}/base.txz ${URL}/kernel.txz"
+		EXTRACT_FILES="${URL}/base.txz ${URL}/kernel.txz ${URL}/doc.txz"
 	else
-		EXTRACT_FILES="/tmp/base.txz /tmp/kernel.txz"
+		EXTRACT_FILES="/tmp/base.txz /tmp/kernel.txz /tmp/doc.txz"
 	fi
 fi
 
@@ -210,7 +210,10 @@ if [ -n "${URL}" -a ! -d "${URL}" ]; then
 	elif ! /usr/bin/fetch -o /tmp/kernel.txz "${URL}/kernel.txz"; then
 		echo "Error fetching ${URL}/kernel.txz"
 		exit 1
-	fi
+	elif ! /usr/bin/fetch -o /tmp/doc.txz "${URL}/doc.txz"; then
+		echo "Error fetching ${URL}/doc.txz"
+		exit 1
+    fi
 fi
 
 # Create GPT
@@ -290,9 +293,9 @@ if ! /sbin/zpool create -f -m none ${ALTROOT} ${VERSION} ${POOL} ${RAID} ${PARTS
 fi
 echo " done"
 
-if [ "${FLETCHER}" = "1" ]; then
-	echo -n "Setting default checksum to fletcher4 for ${POOL} ..."
-	if ! /sbin/zfs set checksum=fletcher4 ${POOL} > /dev/null 2> /dev/null; then
+if [ "${SHAHASH}" = "1" ]; then
+	echo -n "Setting default checksum to sha256 for ${POOL} ..."
+	if ! /sbin/zfs set checksum=sha256 ${POOL} > /dev/null 2> /dev/null; then
 		echo " error"
 		exit 1
 	fi
@@ -317,8 +320,12 @@ if [ "${NOATIME}" = "1" ]; then
 	echo " done"
 fi
 
-echo -n "Creating ${POOL} root partition:"
-if ! /sbin/zfs create -o mountpoint=${ROOTMNT} ${POOL}/root > /dev/null 2> /dev/null; then
+echo -n "Creating ${POOL} ROOT/default partition:"
+if ! /sbin/zfs create -o mountpoint=none ${POOL}/ROOT > /dev/null 2> /dev/null; then
+	echo " error"
+	exit 1
+fi
+if ! /sbin/zfs create -o mountpoint=${ROOTMNT} ${POOL}/ROOT/default > /dev/null 2> /dev/null; then
 	echo " error"
 	exit 1
 fi
@@ -330,15 +337,15 @@ for FS in ${FS_LIST}; do
 	else
 		MNTPT=
 	fi
-	if ! /sbin/zfs create ${MNTPT} ${POOL}/root/${FS} > /dev/null 2> /dev/null; then
+	if ! /sbin/zfs create ${MNTPT} ${POOL}/${FS} > /dev/null 2> /dev/null; then
 		echo " error"
 		exit 1
 	fi
 	echo -n " ${FS}"
 done
 echo " ... done"
-echo -n "Setting bootfs for ${POOL} to ${POOL}/root ..."
-if ! /sbin/zpool set bootfs=${POOL}/root ${POOL} > /dev/null 2> /dev/null; then
+echo -n "Setting bootfs for ${POOL} to ${POOL}/ROOT/default ..."
+if ! /sbin/zpool set bootfs=${POOL}/ROOT/default ${POOL} > /dev/null 2> /dev/null; then
 	echo " error"
 	exit 1
 fi
