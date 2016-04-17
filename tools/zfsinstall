@@ -406,7 +406,7 @@ echo " done"
 
 echo -n "Writing /boot/loader.conf..."
 echo "zfs_load=\"YES\"" > ${MNT}/boot/loader.conf
-echo "vfs.root.mountfrom=\"zfs:${POOL}/root\"" >> ${MNT}/boot/loader.conf
+echo "vfs.root.mountfrom=\"zfs:${POOL}/ROOT/default\"" >> ${MNT}/boot/loader.conf
 echo " done"
 
 # Write fstab if swap or legacy
