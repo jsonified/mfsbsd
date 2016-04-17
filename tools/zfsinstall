@@ -374,12 +374,12 @@ fi
 if [ "${LEGACY}" != "1" ]; then
 	echo -n "Set canmount=off for ${FS_DONT_MOUNT_LIST} ..."
 	for FS in ${FS_DONT_MOUNT_LIST}; do
-		if ! /sbin/zfs set canmount=off ${POOL}/root/${FS}> /dev/null 2> /dev/null; then
-			echo " error setting canmount=off on ${POOL}/root/${FS}"
+		if ! /sbin/zfs set canmount=off ${POOL}/${FS}> /dev/null 2> /dev/null; then
+			echo " error setting canmount=off on ${POOL}/${FS}"
 			exit 1
 		fi
-		if ! /sbin/zfs rename ${POOL}/root/${FS} ${POOL}/${FS}> /dev/null 2> /dev/null; then
-			echo " error renaming filesystem ${POOL}/root/${FS} to ${POOL}/${FS}"
+		if ! /sbin/zfs rename ${POOL}/${FS} ${POOL}/${FS}> /dev/null 2> /dev/null; then
+			echo " error renaming filesystem ${POOL}/${FS} to ${POOL}/${FS}"
 			exit 1
 		fi
 		if ! /sbin/zfs set mountpoint=/${FS} ${POOL}/${FS}> /dev/null 2> /dev/null; then
