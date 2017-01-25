@@ -181,9 +181,9 @@ ${WRKDIR}/.extract_done:
 .if !defined(CUSTOM)
 	@if [ ! -d "${BASE}" ]; then \
 		echo "Please set the environment variable BASE to a path"; \
-		echo "with FreeBSD distribution files (e.g. /cdrom/9.2-RELEASE)"; \
+		echo "with FreeBSD distribution files (e.g. /cdrom/11.0-RELEASE)"; \
 		echo "Examples:"; \
-		echo "make BASE=/cdrom/9.2-RELEASE"; \
+		echo "make BASE=/cdrom/11.0-RELEASE"; \
 		echo "make BASE=/cdrom/usr/freebsd-dist"; \
 		exit 1; \
 	fi

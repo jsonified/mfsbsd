@@ -6,7 +6,7 @@ To make a full-ZFS FreeBSD install from this ISO:
 1. Mount the CD device 
 ( e.g. mount_cd9660 /dev/cd0 /cdrom )
 2. Run "zfsinstall" with path to release directory and your drive
-( e.g. zfsinstall -d ada0 -u /cdrom/9.2-RELEASE-amd64 )
+( e.g. zfsinstall -d ada0 -u /cdrom/11.0-RELEASE-amd64 )
 
 Run zfsinstall with the -h flag for help or without flags for options.
 I recommend creating a GPT swap partition (e.g. -s 2G for a 2GB swap).
