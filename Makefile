@@ -404,8 +404,7 @@ ${WRKDIR}/.config_done:
 genkeys: config ${WRKDIR}/.genkeys_done
 ${WRKDIR}/.genkeys_done:
 	@echo -n "Generating SSH host keys ..."
-	@${SSHKEYGEN} -t rsa1 -b 1024 -f ${_DESTDIR}/etc/ssh/ssh_host_key -N '' > /dev/null
-	@${SSHKEYGEN} -t dsa -f ${_DESTDIR}/etc/ssh/ssh_host_dsa_key -N '' > /dev/null
+	@${SSHKEYGEN} -t ed25519 -f ${_DESTDIR}/etc/ssh/ssh_host_ed25519_key -N '' > /dev/null
 	@${SSHKEYGEN} -t rsa -f ${_DESTDIR}/etc/ssh/ssh_host_rsa_key -N '' > /dev/null
 	@${TOUCH} ${WRKDIR}/.genkeys_done
 	@echo " done"
