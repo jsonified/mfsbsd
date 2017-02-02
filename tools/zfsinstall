@@ -201,10 +201,13 @@ else
 	ROOTMNT=/
 fi
 
-# Fetch base.txz and kernel.txz
+# Fetch tarballs
 
 if [ -n "${URL}" -a ! -d "${URL}" ]; then
-	if ! /usr/bin/fetch -o /tmp/base.txz "${URL}/base.txz"; then
+	if ! /usr/bin/fetch -o /tmp/MANIFEST "${URL}/MANIFEST"; then
+		echo "Error fetching ${URL}/MANIFEST"
+		exit 1
+  elif ! /usr/bin/fetch -o /tmp/base.txz "${URL}/base.txz"; then
 		echo "Error fetching ${URL}/base.txz"
 		exit 1
 	elif ! /usr/bin/fetch -o /tmp/kernel.txz "${URL}/kernel.txz"; then
