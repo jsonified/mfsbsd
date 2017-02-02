@@ -5,7 +5,7 @@
 # Copyright (c) 2011-2013 Martin Matuska <mm at FreeBSD.org>
 #
 FS_LIST="tmp usr usr/home usr/local usr/ports usr/src var var/audit var/crash var/empty var/log var/mail var/tmp"
-FS_DONT_MOUNT_LIST="var usr ROOT"
+FS_DONT_MOUNT_LIST="var usr ROOT usr/local"
 
 usage() {
 	echo "Usage: $0 [-h] -d geom_provider [-d geom_provider ...] -u dist_url [-r mirror|raidz] [-m mount_point] [-p zfs_pool_name] [-V zfs_pool_version] [-s swap_partition_size] [-z zfs_partition_size] [-c] [-l] [-x] [-n] [-a]"
