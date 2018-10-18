@@ -1,0 +1,3 @@
+base.txz	1eaf7d915a04fef810f889e5850695d4b773b36aeedcc9f200e093175405f4d5	24962	base	"Base system (MANDATORY)"	on
+doc.txz	2c8e712d8d835642261e996c076c0e64bda49be41f521343f90a8e4680f4d5e2	1	doc	"Additional Documentation"	off
+kernel.txz	ac7c0d6419992dfe201a000f1420824cf7cb3193293f42bd0002de74a81eb351	884	kernel	"Kernel (MANDATORY)"	on
