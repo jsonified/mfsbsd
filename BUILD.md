@@ -8,8 +8,13 @@ these files to files without .sample ending and make modifications to suit
 your needs.
 
 ## Additional packages and files
-If you want any packages installed, copy the .tbz files that should be 
+If you want any packages installed, copy the .txz files that should be
 automatically installed into the packages/ directory.
+
+You can acquire these, including deep dependencies, using `pkg fetch`
+
+    pkg fetch -r FreeBSD -o . -Uyd python2 tmux rsync ftp/curl
+    mv All packages
 
 Add any additional files into the customfiles/ directory. These will be copied
 recursively into the root of the boot image.
