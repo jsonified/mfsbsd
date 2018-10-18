@@ -14,12 +14,10 @@ stop_cmd=":"
 
 packages_start()
 {
-	PACKAGES=`/bin/ls -1 /packages/*.t?z 2>/dev/null`
-	if /bin/test -n "$PACKAGES"; then
-		MD=`/sbin/mdconfig -a -t swap -s 64m`
-		/sbin/newfs -U /dev/$MD
-		/sbin/mount /dev/$MD /usr/local
-		cd /packages && /usr/sbin/pkg_add *.t?z > /dev/null 2> /dev/null
+	PACKAGES=$(find /packages -type f -name *.t?z)
+	if /bin/test -n "${PACKAGES}" -a -f "/usr/sbin/pkg"; then
+		/usr/bin/env ASSUME_ALWAYS_YES=YES /usr/sbin/pkg bootstrap -f
+		/usr/sbin/pkg -Uy install ${PACKAGES}
 	fi
 }
 
