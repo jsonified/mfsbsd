@@ -586,3 +586,53 @@ clean-roothack:
 clean: clean-roothack
 	${_v}if [ -d ${WRKDIR} ]; then ${CHFLAGS} -R noschg ${WRKDIR}; fi
 	${_v}cd ${WRKDIR} && ${RM} -rf mfs mnt disk dist trees .*_done
+
+koans: base pkg all
+
+base:
+	@rm -rf ./customfiles/usr/freebsd-dist
+	@mkdir ./customfiles/usr/freebsd-dist
+	@cp ${BASE}/base.txz ${BASE}/kernel.txz ./customfiles/usr/freebsd-dist/
+	# include only base and kernel so that bsdinstall doesn't complain
+	# about missing archives
+	@egrep '(base|kernel).txz' ${BASE}/MANIFEST > ./customfiles/usr/freebsd-dist/MANIFEST
+
+pkg:
+	@rm -rf ./packages ./All
+	@pkg fetch -r FreeBSD -o . -Uyd  \
+		devel/git-lite \
+		devel/py-pika \
+		devel/uclcmd \
+		dns/py-dnspython \
+		editors/neovim \
+		ftp/curl \
+		lang/python27 \
+		mail/dma \
+		misc/buffer \
+		net-mgmt/riemann-c-client \
+		net/cloud-init \
+		net/mosh \
+		net/ngrep \
+		net/rabbiteer \
+		net/rsync \
+		net/socat \
+		net/zerotier \
+		ports-mgmt/pkg \
+		py27-ansible \
+		py27-dnspython \
+		security/ca_root_nss \
+		security/hpenc \
+		security/spiped \
+		security/vault \
+		shells/bash \
+		sysutils/htop \
+		sysutils/iocell \
+		sysutils/py-ansible-runner \
+		sysutils/py-packet-python \
+		sysutils/spiped \
+		sysutils/tmux \
+		sysutils/tree \
+		textproc/jq \
+		textproc/uncle
+	@mv All packages
+	@rm -rf packages/py3*

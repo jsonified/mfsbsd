@@ -53,7 +53,9 @@ To prepare your image:
     a webserver, and during the install, use a custom mirror
 - build the image via something like this:
 
-        sudo make BASE=/usr/obj/usr/src/amd64.amd64/release/ftp
+        sudo make WRKDIR=(mktemp -d -t mfsbsd) BASE=/downloads/BSD/current/latest/ftp
+        ls mfs*.img
+
 
 ## deployment
 
@@ -67,9 +69,29 @@ FreeBSD 11.1 OS and this custom iPXE script:
 sysctl kern.geom.debugflags=16
 mount -t tmpfs tmpfs /tmp
 cd /tmp
-fetch --no-verify-peer https://example.org/ipxe/r339417/mfsbsd-12.0-ALPHA9-amd64.img
-dd if=mfsbsd-12.0-ALPHA9-amd64.img of=/dev/ada0 conv=sync bs=1m
+fetch --no-verify-peer https://example.org/ipxe/r339417/mfsbsd-12.0-RELEASE-amd64.img
+dd if=mfsbsd-12.0-RELEASE-amd64.img of=/dev/ada0 conv=sync bs=1m
 reboot -n -q -l
 ```
 
 [packet.net]: https://packet.net/
+
+[koans]
+
+```
+sudo make WRKDIR=(mktemp -d -t mfsbsd) BASE=/downloads/BSD/12.0-RELEASE koans
+find /tmp/mfsbsd.* -type f -name \*.img
+rsync -Phvricalz mfsbsd-12.0-RELEASE-p3-amd64.img root@f01:/www/var/www/koan-ci.com/ipxe/12.0-RELEASE-p3/
+rsync -Phvricalz mfsbsd-12.0-RELEASE-p3-amd64.img root@f02:/www/var/www/koan-ci.com/ipxe/12.0-RELEASE-p3/
+```
+
+# overwrite the existing partition from a ramdisk
+
+
+```
+mount -t tmpfs tmpfs /tmp
+sysctl kern.geom.debugflags=0x10
+rsync -Phrivazcl --inplace mfsbsd-*.img root@...:/tmp/
+```
+
+[koans]: https://koan-ci.com/
