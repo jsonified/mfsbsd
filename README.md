@@ -80,9 +80,7 @@ reboot -n -q -l
 
 ```
 sudo make WRKDIR=(mktemp -d -t mfsbsd) BASE=/downloads/BSD/12.0-RELEASE koans
-find /tmp/mfsbsd.* -type f -name \*.img
-rsync -Phvricalz mfsbsd-12.0-RELEASE-p3-amd64.img root@f01:/www/var/www/koan-ci.com/ipxe/12.0-RELEASE-p3/
-rsync -Phvricalz mfsbsd-12.0-RELEASE-p3-amd64.img root@f02:/www/var/www/koan-ci.com/ipxe/12.0-RELEASE-p3/
+make dist
 ```
 
 # overwrite the existing partition from a ramdisk

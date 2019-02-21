@@ -588,6 +588,11 @@ clean: clean-roothack
 	${_v}cd ${WRKDIR} && ${RM} -rf mfs mnt disk dist trees .*_done
 
 koans: base pkg all
+	@echo remember to run "make dist" to push the artefacts upstream
+
+dist:
+	@rsync -Phvricalz mfsbsd-*.img root@f01.koan-ci.com:/www/var/www/koan-ci.com/ipxe/12.0-RELEASE/
+	@rsync -Phvricalz mfsbsd-*.img root@f02.koan-ci.com:/www/var/www/koan-ci.com/ipxe/12.0-RELEASE/
 
 base:
 	@rm -rf ./customfiles/usr/freebsd-dist
