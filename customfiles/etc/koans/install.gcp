@@ -26,17 +26,24 @@ growfs_enable=YES
 ifconfig_DEFAULT="SYNCDHCP mtu 1460"
 ifconfig_vtnet0_ipv6="inet6 accept_rtadv"
 
+cloned_interfaces="${cloned_interfaces} lo1"
+ifconfig_lo1_aliases="inet 10.241.0.0-15/17"
+
 inetd_enable=NO
+iocell_enable=YES
 ntpd_enable=YES
 ntpd_sync_on_start=YES
 panicmail_autosubmit=NO
 
+pf_enable=YES
 powerd_enable=YES
 sendmail_enable=NONE
 sshd_enable=YES
 syslogd_flags="-ss"
 zerotier_enable=YES
 zfs_enable=YES
+local_unbound=YES
+
 RCCONF
 
 tee /boot/loader.conf << LOADER
@@ -51,6 +58,40 @@ aesni_load="YES"
 nvme_load="YES"
 zfs_load="YES"
 LOADER
+
+tee /etc/unbound/unbound.conf << UNBOUND
+remote-control:
+  control-enable:     yes
+  control-interface:  /var/run/local_unbound.ctl
+  control-use-cert:   no
+forward-zone:
+  name: .
+  forward-addr: 9.9.9.9
+  forward-addr: 4.2.2.2
+  forward-addr: 74.82.42.42
+server:
+ unblock-lan-zones:   yes
+ insecure-lan-zones:  yes
+server:
+  interface-automatic:  yes
+  access-control:       10.0.0.0/8    allow
+  access-control:       ::1/64        allow
+  access-control:       ::/8          refuse
+  access-control:       127.0.0.0/8   allow
+  access-control:       0.0.0.0/0     refuse
+server:
+  # for debugging, stop local_unbound, uncomment
+  # logfile: ""
+  # and then run:
+  # /usr/sbin/unbound -c /var/unbound/unbound.conf -dvvvv
+  interface: 127.0.0.1
+  interface: 10.241.0.0
+  username: unbound
+  directory: /var/unbound
+  chroot: /var/unbound
+  pidfile: /var/run/local_unbound.pid
+  auto-trust-anchor-file: /var/unbound/root.key
+UNBOUND
 
 tee -a /etc/ssh/sshd_config << SSHD
 UsePAM no
@@ -68,6 +109,9 @@ ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAII6IeTZ8APfpZo6GgM44owR4ULmyoPXj2jVT07jNZVs6
 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKBudYUq75fcboPTPb8inxUl5JYw6nfOyfmL9iAEMEb2 dch@koan-ci.com 20180905
 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEs+nwz72CN8G1ArRsVMyk80z8EWgDwaVKwTUTzMRHVk ley@koan-ci.com
 KEYS
+
+# all the time in the world
+tzsetup -s UTC
 
 # add users
 pw useradd -n ansible -u 333 -s /bin/sh -m -w none
@@ -107,15 +151,17 @@ pkg install -Uyr FreeBSD \
     dns/py-dnspython \
     editors/neovim \
     ftp/curl \
-    lang/python2 \
     lang/p5-Modern-Perl \
+    lang/python2 \
     misc/freebsd-doc-en \
     misc/freebsd-release-manifests \
+    net-mgmt/riemann-c-client \
     net/mosh \
     net/ngrep \
     net/rabbiteer \
     net/rsync \
     net/zerotier \
+    ports-mgmt/pkg \
     security/ca_root_nss \
     security/hpenc \
     security/sudo \
@@ -126,6 +172,7 @@ pkg install -Uyr FreeBSD \
     sysutils/consul \
     sysutils/cronic \
     sysutils/htop \
+    sysutils/iocell \
     sysutils/nomad \
     sysutils/panicmail \
     sysutils/pstree \
@@ -142,8 +189,61 @@ tee /usr/local/etc/sudoers.d/ansible << SUDO
 %ansible ALL=(ALL) NOPASSWD: ALL
 SUDO
 
+# jail facts
+mkdir -p /usr/local/etc/ansible/facts.d
+tee /usr/local/etc/ansible/facts.d/iocell.fact << JAILS
+#!/bin/sh
+jls -v --libxo=json | jq '."jail-information"'
+JAILS
+chmod 0750 /usr/local/etc/ansible/facts.d/iocell.fact
+
+# iocell
+iocell activate zroot
+iocell fetch release=12.0-RELEASE ftpfiles='base.txz kernel.txz'
+# always set these in cloned jails
+ln -s /iocell/releases/12.0-RELEASE/root /template
+tzsetup -s -C /template UTC
+mkdir -p /template/usr/local/etc/
+cp -a /usr/local/etc/pkg /template/usr/local/etc/
+
+tee /template/etc/rc.conf << TEMPL_RCCONF
+hostname="template.koan-ci.com"
+ipv6_activate_all_interfaces=YES
+jail_host=localhost
+cron_enable=NO
+ntpd_enable=NO
+sendmail_enable=NONE
+sendmail_submit_enable=NO
+sendmail_outbound_enable=NO
+sendmail_msp_queue_enable=NO
+sshd_enable=NO
+syslogd_enable=NO
+TEMPL_RCCONF
+
+# inject packages
+pkg -o ABI=FreeBSD:12:amd64 \
+    --chroot /template \
+    --config /usr/local/etc/pkg/repos/FreeBSD.conf \
+    install -y $(pkg prime-origins)
+
 # remove junk from cache
-find /var/cache -type f -delete
+find /var/cache /template/var/cache -type f -delete
+
+# make a template for later use
+iocell create tag=12.0-KOANS \
+  host_hostname=runner.koan-ci.com \
+  release=12.0-RELEASE \
+  ip6=disable \
+  allow_raw_sockets=0 \
+  vnet=off \
+  boot=off \
+  resolver='search koan-ci.com;nameserver 10.241.0.0'
+
+# revert jail to template
+iocell set istemplate=yes 12.0-KOANS
+touch /iocell/templates/12.0-KOANS/ready
+rm /template
+ln -s /iocell/templates/12.0-KOANS/root /template
 
 # update growfs for ZFS support
 curl -#Lo /etc/rc.d/growfs \
@@ -154,7 +254,8 @@ tee -a /etc/fstab << FSTAB
 tmpfs	/tmp	tmpfs	rw,mode=01777,size=2g	0	0
 FSTAB
 
-zfs set canmount=off zroot/tmp
-zfs set mountpoint=none zroot/tmp
+#zfs set canmount=off zroot/tmp
+#zfs set mountpoint=none zroot/tmp
+zfs destroy -fr zroot/tmp
 chmod 01777 /tmp
 zfs snapshot -r zroot@pre-1st-boot
