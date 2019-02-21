@@ -1,0 +1,160 @@
+# /etc/installerconfig
+DISTRIBUTIONS="base.txz kernel.txz"
+BSDINSTALL_DISTDIR=/usr/freebsd-dist
+BSDINSTALL_DISTSITE=https://download.freebsd.org/ftp/releases/amd64/amd64/12.0-RELEASE/
+export ZFSBOOT_VDEV_TYPE=stripe
+export ZFSBOOT_DISKS=da0
+export ZFSBOOT_SWAP_SIZE=2g
+export nonInteractive="YES"
+
+#!/bin/sh
+tee /etc/rc.conf << RCCONF
+hostname="something.koan-ci.com"
+clear_tmp_enable=YES
+dumpdev=AUTO
+
+cloudinit_enable=YES
+firstboot_freebsd_update_enable=YES
+firstboot_pkgs_enable=YES
+google_accounts_daemon_enable=YES
+google_clock_skew_daemon_enable=YES
+google_instance_setup_enable=YES
+google_network_daemon_enable=YES
+google_startup_enable=YES
+growfs_enable=YES
+
+ifconfig_DEFAULT="SYNCDHCP mtu 1460"
+ifconfig_vtnet0_ipv6="inet6 accept_rtadv"
+
+inetd_enable=NO
+ntpd_enable=YES
+ntpd_sync_on_start=YES
+panicmail_autosubmit=NO
+
+powerd_enable=YES
+sendmail_enable=NONE
+sshd_enable=YES
+syslogd_flags="-ss"
+zerotier_enable=YES
+zfs_enable=YES
+RCCONF
+
+tee /boot/loader.conf << LOADER
+autoboot_delay="-1"
+beastie_disable="YES"
+loader_logo="none"
+hw.memtest.tests="0"
+console="comconsole,vidconsole"
+hw.vtnet.mq_disable=1
+kern.timecounter.hardware=ACPI-safe
+aesni_load="YES"
+nvme_load="YES"
+zfs_load="YES"
+LOADER
+
+tee -a /etc/ssh/sshd_config << SSHD
+UsePAM no
+UseDNS no
+Port 2200
+PermitRootLogin without-password
+ChallengeResponseAuthentication no
+AcceptEnv VAULT_TOKEN
+SSHD
+
+mkdir -m 0700 /root/.ssh
+tee /root/.ssh/authorized_keys << KEYS
+ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHuuKqa0KEiCFC3Pr5LmWae/ZZfxOQcH9b9jFHLEMC3t ansible@koan-ci.com 20181011
+ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAII6IeTZ8APfpZo6GgM44owR4ULmyoPXj2jVT07jNZVs6 root@koan-ci.com 20181011
+ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKBudYUq75fcboPTPb8inxUl5JYw6nfOyfmL9iAEMEb2 dch@koan-ci.com 20180905
+ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEs+nwz72CN8G1ArRsVMyk80z8EWgDwaVKwTUTzMRHVk ley@koan-ci.com
+KEYS
+
+# add users
+pw useradd -n ansible -u 333 -s /bin/sh -m -w none
+cp -a /root/.ssh /home/ansible/
+touch /home/ansible/.hushlogin
+chown -R ansible:ansible /home/ansible/.ssh/
+
+pw useradd -n build   -u 334 -s /bin/sh -m -w no -G ansible
+cp -a /root/.ssh /home/build/
+touch /home/build/.hushlogin
+chown -R build:build /home/build/.ssh/
+
+# fortune favours those who keep their mouths shut
+rm -rf /usr/bin/fortune
+
+# initalise packages
+mkdir -p /usr/local/etc/pkg/repos
+tee /usr/local/etc/pkg/repos/FreeBSD.conf << PKG
+FreeBSD: {
+    url: pkg+http://pkg.FreeBSD.org/\${ABI}/latest
+    enabled: yes
+}
+PKG
+
+/usr/bin/env ASSUME_ALWAYS_YES=YES /usr/sbin/pkg bootstrap -f
+pkg update
+pkg install -Uyr FreeBSD \
+    archivers/gtar \
+    archivers/p7zip \
+    benchmarks/iperf \
+    benchmarks/iperf3 \
+    devel/git-lite \
+    devel/py-libzfs \
+    devel/py-pika \
+    devel/uclcmd \
+    devel/yajl \
+    dns/py-dnspython \
+    editors/neovim \
+    ftp/curl \
+    lang/python2 \
+    lang/p5-Modern-Perl \
+    misc/freebsd-doc-en \
+    misc/freebsd-release-manifests \
+    net/mosh \
+    net/ngrep \
+    net/rabbiteer \
+    net/rsync \
+    net/zerotier \
+    security/ca_root_nss \
+    security/hpenc \
+    security/sudo \
+    security/vault \
+    shells/fish \
+    shells/zsh \
+    sysutils/ansible \
+    sysutils/consul \
+    sysutils/cronic \
+    sysutils/htop \
+    sysutils/nomad \
+    sysutils/panicmail \
+    sysutils/pstree \
+    sysutils/pwgen \
+    sysutils/py-ansible-runner \
+    sysutils/tmux \
+    sysutils/tree \
+    textproc/jq \
+    textproc/ripgrep
+
+tee /usr/local/etc/sudoers.d/ansible << SUDO
+# ansible managed
+%wheel ALL=(ALL) NOPASSWD: ALL
+%ansible ALL=(ALL) NOPASSWD: ALL
+SUDO
+
+# remove junk from cache
+find /var/cache -type f -delete
+
+# update growfs for ZFS support
+curl -#Lo /etc/rc.d/growfs \
+    https://svnweb.freebsd.org/base/stable/12/libexec/rc/rc.d/growfs\?view\=co
+
+# finalise filesystems
+tee -a /etc/fstab << FSTAB
+tmpfs	/tmp	tmpfs	rw,mode=01777,size=2g	0	0
+FSTAB
+
+zfs set canmount=off zroot/tmp
+zfs set mountpoint=none zroot/tmp
+chmod 01777 /tmp
+zfs snapshot -r zroot@pre-1st-boot
