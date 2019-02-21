@@ -606,6 +606,7 @@ pkg:
 		dns/py-dnspython \
 		editors/neovim \
 		ftp/curl \
+		lang/python2 \
 		lang/python27 \
 		mail/dma \
 		misc/buffer \
