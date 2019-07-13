@@ -126,6 +126,7 @@ if [ "$ZFS_VERSION" -lt "28" ]; then
         ALIGNMENT=""
         ASHIFT=""
 elif [ "$ALIGNMENT" = "1" ]; then
+        sysctl vfs.zfs.min_auto_ashift=12
         ALIGNMENT="-a 4k"
         ASHIFT="-o ashift=12"
 fi
