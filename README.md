@@ -1,32 +1,80 @@
 # mfsBSD
 
-Copyright (c) 2018 Martin Matuska <mm at FreeBSD.org>
+## upstream
 
-Version 2.3
+- Copyright (c) 2018 Martin Matuska <mm at FreeBSD.org>
+- Version 2.3
+- https://github.com/mmatuska/mfsbsd | http://mfsbsd.vx.sk
 
-## Description
+# groupon
 
-This is a set of scripts that generates a bootable image, ISO file or boot 
-files only, that create a working minimal installation of FreeBSD. This
-minimal installation gets completely loaded into memory.
+To prepare your image:
 
-The image may be written directly using dd(1) onto any bootable block device,
-e.g. a hard disk or a USB stick e.g. /dev/da0, or a bootable slice only, 
-e.g. /dev/ada0s1
+- clone this repo on an appropriate FreeBSD system
+- amend files in `./conf/*` as required
+- build the image, all listed parameters are optional:
 
-## Build-time requirements
- - FreeBSD 10 or higher installed, tested on i386 or amd64
- - Base and kernel from a FreeBSD 10 or higher distribution
-   (release or snapshots, e.g mounted CDROM disc1 or ISO file)
+        # make \
+            DISTREL=12.0-RELEASE \
+            DISTURL=https://ftp.freebsd.org/pub/FreeBSD/releases/amd64/amd64 \
+            fetch
+        # make \
+            DISTREL=12.0-RELEASE \
+            DISTURL=https://ftp.freebsd.org/pub/FreeBSD/releases/amd64/amd64 \
+            image
+        # ls mfs*.img
 
-## Runtime requirements
- - a minimum of 512MB system memory
+> `DISTURL` can equally be a file:////url
 
-## Other information
+## deployment
 
-See [BUILD](./BUILD.md) and [INSTALL](./INSTALL.md) for building and installation instructions.
+To deploy your new image, netboot an existing server using iPXE or
+`dd(1)` your new image in over the top. It should be possible to jump
+directly to the installer from iPXE, so long as you are using a recent
+iPXE and BIOS boot on the server.
 
-Project homepage: http://mfsbsd.vx.sk
+### sample iPXE script
 
-This project is based on the ideas of the depenguinator project:
-http://www.daemonology.net/depenguinator/
+```
+#!ipxe
+echo ========= iPXE ==========
+echo mac          ${mac}
+echo uuid         ${uuid}
+echo serial       ${serial}
+echo ip           ${ip}
+echo manufacturer ${manufacturer}
+echo product      ${product}
+echo next-server  ${netX/next-server}
+echo filename     ${netX/filename}
+echo root-path    ${netX/root-path}
+echo default-url  ${default-url}
+
+prompt --key 0x1b --timeout 5000 Press ESC for iPXE shell... && shell ||
+imgfree
+imgfetch ${default-url}/mfsbsd.img
+imgfetch ${default-url}/memdisk
+# ready to boot
+imgstat
+prompt --key 0x1b --timeout 5000 Press ESC for iPXE shell... && shell ||
+boot memdisk raw
+```
+
+## deploying on top of an existing system
+
+If you already have shell access, then it's possible to slip mfsBSD on
+there while zfs isn't looking - ada1 seems to be the drive they actually
+boot from at BIOS level, so split it off from zfs and then dd over
+active ada0 before zfs notices!
+
+```
+# mount -t tmpfs tmpfs /mnt
+# cd /mnt
+# curl -#LO http://your/mfsbsd.img
+# sha256 mfsbsd.img
+SHA256 (mfsbsd.img) = e87f9bfabfc1cc9bc7e42c6c38fa5c0c17680b508c641fc0db2153179e8389f5
+# zpool offline zroot ada1
+# dd if=mfsbsd.img of=/dev/ada1 conv=sync bs=1m
+# sysctl kern.geom.debugflags=16
+# dd if=mfsbsd.img of=/dev/ada0 conv=sync bs=1m
+# reboot -n -q -l && /bin/pray
+```
