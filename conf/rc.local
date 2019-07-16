@@ -1,0 +1,4 @@
+echo rc.local
+echo server:$(/usr/bin/grep -h 'option host-name ' /var/db/dhclient.leases* | /usr/bin/awk -F \" '{print $2}'| /usr/bin/head -n 1)
+echo domain:$(/usr/bin/grep -h 'option domain-name ' /var/db/dhclient.leases* | /usr/bin/awk -F \" '{print $2}'| /usr/bin/head -n 1)
+
