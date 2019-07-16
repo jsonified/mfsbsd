@@ -605,3 +605,21 @@ ${DISTDIR}/MANIFEST:
 	# about missing archives
 	${_v}fetch -o - ${DISTURL}/${DISTREL}/MANIFEST | egrep '(base|kernel).txz' > ${DISTDIR}/MANIFEST
 
+pkg:
+	# pull down core deployment packages from FreeBSD mirrors
+	${_v}find ${PACKAGESDIR} -name \*.txz -delete
+	${_v}env url=${REPOURL} abi=${DISTABI} pkg fetch -o ${PACKAGESDIR}/ -yd ports-mgmt/pkg \
+		devel/git-lite \
+		ftp/curl \
+		net/rsync \
+		security/ca_root_nss \
+		shells/bash \
+		sysutils/htop \
+		sysutils/tmux \
+		textproc/jq
+	${_v}rm -rf ${PACKAGESDIR}/py3*
+	${_v}mv ${PACKAGESDIR}/All/*.txz ${PACKAGESDIR}
+	${_v}rm -rf ${PACKAGESDIR}/All
+
+groupon: ${DISTDIR}/MANIFEST pkg all
+
