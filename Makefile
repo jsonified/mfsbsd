@@ -308,6 +308,8 @@ ${WRKDIR}/.packages_done:
 	@echo "pkg-static not found at: ${PKG_STATIC}"
 	${_v}exit 1
 .  endif
+	# ensure pkg(8) has /dev/null available
+	${_v}mount -t devfs devfs ${_DESTDIR}/dev
 	${_v}mkdir -p ${_DESTDIR}/usr/local/sbin
 	${_v}${INSTALL} -o root -g wheel -m 0755 ${PKG_STATIC} ${_DESTDIR}/usr/local/sbin/
 	${_v}${LN} -sf pkg-static ${_DESTDIR}/usr/local/sbin/pkg
@@ -330,6 +332,7 @@ ${WRKDIR}/.packages_done:
 		${RM} -rf ${_DESTDIR}/packages; \
 		echo " done"; \
 	fi
+	${_v}umount ${_DESTDIR}/dev
 	${_v}${TOUCH} ${WRKDIR}/.packages_done
 
 config: install ${WRKDIR}/.config_done
