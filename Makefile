@@ -28,6 +28,13 @@ MFSROOT_MAXSIZE?=	512m
 #
 # Paths
 #
+# where things get fetched or put into
+DISTABI?=		FreeBSD:12:amd64
+DISTDIR?=		freebsd-dist
+DISTREL?=		12.0-RELEASE
+DISTURL?=		https://ftp.freebsd.org/pub/FreeBSD/releases/amd64/amd64
+REPOURL?=		pkg+http://pkg.freebsd.org/${DISTABI}/latest
+# general mfsBSD settings
 SRC_DIR?=		/usr/src
 CFGDIR?=		conf
 SCRIPTSDIR?=		scripts
@@ -589,3 +596,12 @@ clean-roothack:
 clean: clean-roothack
 	${_v}if [ -d ${WRKDIR} ]; then ${CHFLAGS} -R noschg ${WRKDIR}; fi
 	${_v}cd ${WRKDIR} && ${RM} -rf mfs mnt disk dist trees .*_done
+
+${DISTDIR}/MANIFEST:
+	${_v}rm -rf  ${DISTDIR}/MANIFEST ${DISTDIR}/*.txz
+	${_v}fetch -o ${DISTDIR}/ ${DISTURL}/${DISTREL}/base.txz
+	${_v}fetch -o ${DISTDIR}/ ${DISTURL}/${DISTREL}/kernel.txz
+	# include only base and kernel so that bsdinstall doesn't complain
+	# about missing archives
+	${_v}fetch -o - ${DISTURL}/${DISTREL}/MANIFEST | egrep '(base|kernel).txz' > ${DISTDIR}/MANIFEST
+
