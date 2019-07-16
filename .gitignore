@@ -11,3 +11,6 @@
 /tools/pkg-static
 /tools/roothack/roothack
 /tools/roothack/roothack.o
+freebsd-dist/
+packages/
+work/
