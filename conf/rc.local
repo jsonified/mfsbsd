@@ -7,6 +7,13 @@
 # installing in freebsd-install an administrator should be able to console in
 # to the box and `tmux at` to see the progress of the installation.
 
+# Saves install logs to peristent storage
+savelogs() {
+    /bin/echo "Saving logs..."
+    /bin/echo /bin/cp -p /tmp/root-ansible/nuker/ansible.log /mnt/var/log/ansible-nuker.log
+    /bin/echo /bin/cp -p /tmp/root-ansible/paver/ansible.log /mnt/var/log/ansible-paver.log
+}
+
 # Kills script after specified time
 TIMEOUT=3600
 killtimer() {
