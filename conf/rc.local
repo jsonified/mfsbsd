@@ -28,11 +28,12 @@ set -e
 exec 2>&1
 
 # not clear why the /var/cache shuffle is done in the old installer,
-# I suspect it's not needed as /var/cache/pkg is not 
+# I suspect it's not needed as /var/cache/pkg is not needed as packages
+# are already installed during mfsBSD image creation
 # mount -t tmpfs tmpfs /var/cache
 
 # mfsBSD image can have tainted ownership if edited by normal user
-# and then built under root user
+# and then built under root user which prevents remote root login
 chown -R root:wheel /root
 ssh-keyscan github.groupondev.com >> /root/.ssh/known_hosts
 
