@@ -1,4 +1,49 @@
-echo rc.local
-echo server:$(/usr/bin/grep -h 'option host-name ' /var/db/dhclient.leases* | /usr/bin/awk -F \" '{print $2}'| /usr/bin/head -n 1)
-echo domain:$(/usr/bin/grep -h 'option domain-name ' /var/db/dhclient.leases* | /usr/bin/awk -F \" '{print $2}'| /usr/bin/head -n 1)
+#!/bin/sh --
+
+# Groupon BSD install
+
+# This script runs inside the FreeBSD PXE boot image and acts as a two stage
+# bootloader that allows rc.d to continue processing.  While the OS is
+# installing in freebsd-install an administrator should be able to console in
+# to the box and `tmux at` to see the progress of the installation.
+
+# Kills script after specified time
+TIMEOUT=3600
+killtimer() {
+    echo "Kill timer started for process $$"
+    sleep $TIMEOUT
+    echo 'Script timed out!'
+    kill -9 $$
+}
+
+# Saves install logs on exit or errors
+trap savelogs 0 1 2 3 6 9 14 15
+
+# Start kill timer in background
+killtimer &
+
+set -u
+set -e
+
+exec 2>&1
+
+# not clear why the /var/cache shuffle is done in the old installer,
+# I suspect it's not needed as /var/cache/pkg is not 
+# mount -t tmpfs tmpfs /var/cache
+
+# mfsBSD image can have tainted ownership if edited by normal user
+# and then built under root user
+chown -R root:wheel /root
+ssh-keyscan github.groupondev.com >> /root/.ssh/known_hosts
+
+DOMAIN=$(sed -rn 's/.+option domain-name "(.+)";/\1/gp' /var/db/dhclient.leases* | head -1)
+HOSTNAME=$(sed -rn 's/.+option host-name "(.+)";/\1/gp' /var/db/dhclient.leases* | head -1)
+DOMAIN=$(sed -rn 's/.+option domain-name "(.+)";/\1/gp' /var/db/dhclient.leases* | head -1)
+OS_CONFIG=$(fetch -a -w 15 -q -o - http://config/host/$HOSTNAME.$DOMAIN | sed -rn 's/os_config: *//gp')
+
+# FIXME(seanc@): This should include a public key signature or at the very
+# least a checksum of the install script to ensure against injection or even
+# a partial fetch(1).
+fetch -a -w 15 -q -o /tmp/freebsd-install http://blast/profile/$OS_CONFIG-install
+exec /bin/sh /tmp/freebsd-install > /tmp/install.log &
 

@@ -21,42 +21,45 @@ To prepare your image:
         # make \
             DISTREL=12.0-RELEASE \
             DISTURL=https://ftp.freebsd.org/pub/FreeBSD/releases/amd64/amd64 \
-            image
-        # ls mfs*.img
+            gzimage
+        # ls mfs*
 
 > `DISTURL` can equally be a file:////url
 
 ## deployment
 
-To deploy your new image, netboot an existing server using iPXE or
-`dd(1)` your new image in over the top. It should be possible to jump
-directly to the installer from iPXE, so long as you are using a recent
-iPXE and BIOS boot on the server.
+To deploy your new image, netboot an existing server using iPXE, or
+simply unzip and dd this image in over the top. It should be possible
+to jump directly to the installer from iPXE, so long as you are using a
+BIOS-based boot on your server, and iPXE with HTTP and BZIMAGE support.
 
 ### sample iPXE script
 
 ```
 #!ipxe
-echo ========= iPXE ==========
-echo mac          ${mac}
-echo uuid         ${uuid}
-echo serial       ${serial}
-echo ip           ${ip}
-echo manufacturer ${manufacturer}
-echo product      ${product}
-echo next-server  ${netX/next-server}
-echo filename     ${netX/filename}
-echo root-path    ${netX/root-path}
-echo default-url  ${default-url}
+echo _____________ iPXE __________________
+echo mac______________${mac}
+echo uuid_____________${uuid}
+echo serial___________${serial}
+echo ip_______________${ip}
+echo manufacturer_____${manufacturer}
+echo product__________${product}
+echo next-server______${netX/next-server}
+echo filename_________${netX/filename}
+echo config-server____${netX/default-url}
 
 prompt --key 0x1b --timeout 5000 Press ESC for iPXE shell... && shell ||
+# log info via GET and ignore any HTTP response
+imgfetch ${default-url}/log?uuid=${uuid}&mac=${mac:hexhyp}&domain=${domain}&hostname=${hostname}&serial=${serial} ||
 imgfree
-imgfetch ${default-url}/mfsbsd.img
+imgfetch ${default-url}/mfsbsd.img.gz
 imgfetch ${default-url}/memdisk
 # ready to boot
 imgstat
 prompt --key 0x1b --timeout 5000 Press ESC for iPXE shell... && shell ||
-boot memdisk raw
+boot memdisk raw keeppxe ||
+prompt --key 0x1b --timeout 9999 Press ESC for iPXE shell... && shell ||
+reboot
 ```
 
 ## deploying on top of an existing system

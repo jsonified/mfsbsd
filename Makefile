@@ -555,6 +555,12 @@ ${IMAGE}:
 	@echo " done"
 	${_v}${LS} -l ${.TARGET}
 
+gzimage: image ${IMAGE}.gz
+${IMAGE}.gz:
+	@echo -n "Compressing image file ..."
+	${_v}${GZIP} -9 -f ${IMAGE}
+	@echo " done"
+
 gce: install prune config genkeys customfiles boot compress-usr mfsroot fbsddist ${IMAGE} ${GCEFILE}
 ${GCEFILE}:
 	@echo -n "Creating GCE-compatible tarball..."
@@ -592,7 +598,10 @@ ${TARFILE}:
 clean-roothack:
 	${_v}${RM} -rf ${WRKDIR}/roothack
 
-clean: clean-roothack
+clean-images:
+	${_v}${RM} -rf ${IMAGE} ${IMAGE}.*
+
+clean: clean-roothack clean-pkg clean-images
 	${_v}if [ -d ${WRKDIR} ]; then ${CHFLAGS} -R noschg ${WRKDIR}; fi
 	${_v}cd ${WRKDIR} && ${RM} -rf mfs mnt disk dist trees .*_done
 
@@ -607,16 +616,23 @@ ${BASE}/MANIFEST:
 	# about missing archives
 	${_v}fetch -o - ${DISTURL}/${DISTREL}/MANIFEST | egrep '(base|kernel).txz' > ${BASE}/MANIFEST
 
+clean-pkg:
+	${_v}find ${PACKAGESDIR} -name \*.txz -delete
+
 pkg:
 	# pull down core deployment packages from FreeBSD mirrors
-	${_v}find ${PACKAGESDIR} -name \*.txz -delete
 	${_v}env url=${REPOURL} abi=${DISTABI} pkg fetch -o ${PACKAGESDIR}/ -yd ports-mgmt/pkg \
 		devel/git-lite \
 		ftp/curl \
+		ftp/wget \
+		lang/python2 \
 		net/rsync \
 		security/ca_root_nss \
 		shells/bash \
+		sysutils/ansible1 \
 		sysutils/htop \
+		sysutils/ipmitool \
+		sysutils/sas2ircu \
 		sysutils/tmux \
 		textproc/jq
 	${_v}mv ${PACKAGESDIR}/All/*.txz ${PACKAGESDIR}
