@@ -17,7 +17,7 @@ To prepare your image:
         # make \
             DISTREL=12.0-RELEASE \
             DISTURL=https://ftp.freebsd.org/pub/FreeBSD/releases/amd64/amd64 \
-            fetch
+            fetch pkg
         # make \
             DISTREL=12.0-RELEASE \
             DISTURL=https://ftp.freebsd.org/pub/FreeBSD/releases/amd64/amd64 \

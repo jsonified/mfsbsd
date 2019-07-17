@@ -6,7 +6,7 @@
 #
 # User-defined variables
 #
-BASE?=			/cdrom/usr/freebsd-dist
+BASE?=			/usr/freebsd-dist
 KERNCONF?=		GENERIC
 MFSROOT_FREE_INODES?=	10%
 MFSROOT_FREE_BLOCKS?=	10%
@@ -30,7 +30,6 @@ MFSROOT_MAXSIZE?=	512m
 #
 # where things get fetched or put into
 DISTABI?=		FreeBSD:12:amd64
-DISTDIR?=		freebsd-dist
 DISTREL?=		12.0-RELEASE
 DISTURL?=		https://ftp.freebsd.org/pub/FreeBSD/releases/amd64/amd64
 REPOURL?=		pkg+http://pkg.freebsd.org/${DISTABI}/latest
@@ -597,13 +596,16 @@ clean: clean-roothack
 	${_v}if [ -d ${WRKDIR} ]; then ${CHFLAGS} -R noschg ${WRKDIR}; fi
 	${_v}cd ${WRKDIR} && ${RM} -rf mfs mnt disk dist trees .*_done
 
-${DISTDIR}/MANIFEST:
-	${_v}rm -rf  ${DISTDIR}/MANIFEST ${DISTDIR}/*.txz
-	${_v}fetch -o ${DISTDIR}/ ${DISTURL}/${DISTREL}/base.txz
-	${_v}fetch -o ${DISTDIR}/ ${DISTURL}/${DISTREL}/kernel.txz
+fetch: ${BASE}/MANIFEST
+
+${BASE}/MANIFEST:
+	${_v}test -d ${BASE} || mkdir -p ${BASE}
+	${_v}rm -rf  ${BASE}/MANIFEST ${BASE}/*.txz
+	${_v}fetch -o ${BASE}/ ${DISTURL}/${DISTREL}/base.txz
+	${_v}fetch -o ${BASE}/ ${DISTURL}/${DISTREL}/kernel.txz
 	# include only base and kernel so that bsdinstall doesn't complain
 	# about missing archives
-	${_v}fetch -o - ${DISTURL}/${DISTREL}/MANIFEST | egrep '(base|kernel).txz' > ${DISTDIR}/MANIFEST
+	${_v}fetch -o - ${DISTURL}/${DISTREL}/MANIFEST | egrep '(base|kernel).txz' > ${BASE}/MANIFEST
 
 pkg:
 	# pull down core deployment packages from FreeBSD mirrors
@@ -617,9 +619,7 @@ pkg:
 		sysutils/htop \
 		sysutils/tmux \
 		textproc/jq
-	${_v}rm -rf ${PACKAGESDIR}/py3*
 	${_v}mv ${PACKAGESDIR}/All/*.txz ${PACKAGESDIR}
+	${_v}rm -rf ${PACKAGESDIR}/py3*
 	${_v}rm -rf ${PACKAGESDIR}/All
-
-groupon: ${DISTDIR}/MANIFEST pkg all
 
