@@ -621,12 +621,14 @@ clean-pkg:
 
 pkg:
 	# pull down core deployment packages from FreeBSD mirrors
+	# NB sas2ircu must be built locally it is RESTRICTED distribution port
 	${_v}env url=${REPOURL} abi=${DISTABI} pkg fetch -o ${PACKAGESDIR}/ -yd ports-mgmt/pkg \
 		devel/git-lite \
 		ftp/curl \
 		ftp/wget \
 		lang/python2 \
 		net/rsync \
+		net/mosh \
 		security/ca_root_nss \
 		shells/bash \
 		sysutils/ansible1 \
