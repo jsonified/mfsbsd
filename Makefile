@@ -324,10 +324,12 @@ ${WRKDIR}/.packages_done:
                 cd ${_DESTDIR}/packages && for _FILE in *; do \
                         _FILES="$${_FILES} /packages/$${_FILE}"; \
                 done; \
+                mount -t devfs devfs ${_DESTDIR}/dev; \
                 ${PKG} -c ${_DESTDIR} add -M $${_FILES}; \
 	fi
 	${_v}if [ -d "${_DESTDIR}/packages" ]; then \
 		${RM} -rf ${_DESTDIR}/packages; \
+		umount ${_DESTDIR}/dev; \
 		echo " done"; \
 	fi
 	${_v}${TOUCH} ${WRKDIR}/.packages_done
@@ -628,7 +630,6 @@ pkg:
 		py27-dnspython \
 		security/ca_root_nss \
 		security/hpenc \
-		security/spiped \
 		security/vault \
 		shells/bash \
 		sysutils/htop \
