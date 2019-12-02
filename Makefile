@@ -6,11 +6,12 @@
 #
 # User-defined variables
 #
+VERSION?=		12.1-RELEASE
 BASE?=			/cdrom/usr/freebsd-dist
 KERNCONF?=		GENERIC
 MFSROOT_FREE_INODES?=	10%
 MFSROOT_FREE_BLOCKS?=	10%
-MFSROOT_MAXSIZE?=	600m
+MFSROOT_MAXSIZE?=	500m
 
 # If you want to build your own kernel and make you own world, you need to set
 # -DCUSTOM or CUSTOM=1
@@ -590,8 +591,8 @@ koans: base pkg all
 	@echo remember to run "make dist" to push the artefacts upstream
 
 dist:
-	@rsync -Phvricalz mfsbsd-*.img root@f01.koan-ci.com:/www/var/www/koan-ci.com/ipxe/12.0-RELEASE/
-	@rsync -Phvricalz mfsbsd-*.img root@f02.koan-ci.com:/www/var/www/koan-ci.com/ipxe/12.0-RELEASE/
+	@rsync -Phvricalz mfsbsd-*.img root@f01.koan-ci.com:/www/var/www/koan-ci.com/ipxe/${VERSION}/
+	@rsync -Phvricalz mfsbsd-*.img root@f02.koan-ci.com:/www/var/www/koan-ci.com/ipxe/${VERSION}/
 
 base:
 	@rm -rf ./customfiles/usr/freebsd-dist
@@ -604,39 +605,27 @@ base:
 pkg:
 	@rm -rf ./packages ./All
 	@pkg fetch -r FreeBSD -o . -Uyd  \
+		py36-ansible-runner \
+		lang/python3 \
 		devel/git-lite \
-		devel/py-pika \
 		devel/uclcmd \
-		dns/py-dnspython \
 		editors/neovim \
 		ftp/curl \
-		lang/python2 \
-		lang/python27 \
-		mail/dma \
 		misc/buffer \
 		net-mgmt/riemann-c-client \
-		net/cloud-init \
 		net/mosh \
 		net/ngrep \
 		net/rabbiteer \
 		net/rsync \
-		net/socat \
 		net/zerotier \
 		ports-mgmt/pkg \
-		py27-ansible \
-		py27-dnspython \
 		security/ca_root_nss \
 		security/hpenc \
 		security/vault \
-		shells/bash \
 		sysutils/htop \
-		sysutils/iocell \
-		sysutils/py-ansible-runner \
-		sysutils/py-packet-python \
 		sysutils/spiped \
 		sysutils/tmux \
 		sysutils/tree \
-		textproc/jq \
-		textproc/uncle
+		textproc/jq
 	@mv All packages
-	@rm -rf packages/py3*
+	@rm -rf packages/py2*
