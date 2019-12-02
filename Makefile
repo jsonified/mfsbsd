@@ -6,7 +6,9 @@
 #
 # User-defined variables
 #
+ARCH?=			amd64
 VERSION?=		13.0-RELEASE
+SITE?=			https://download.freebsd.org/ftp/releases/${ARCH}/${VERSION}
 BASE?=			/cdrom/usr/freebsd-dist
 KERNCONF?=		GENERIC
 MFSROOT_FREE_INODES?=	10%
@@ -587,8 +589,14 @@ clean: clean-roothack
 	${_v}if [ -d ${WRKDIR} ]; then ${CHFLAGS} -R noschg ${WRKDIR}; fi
 	${_v}cd ${WRKDIR} && ${RM} -rf mfs mnt disk dist trees .*_done
 
-koans: base pkg all
+koans: fetch base pkg all
 	@echo remember to run "make dist" to push the artefacts upstream
+
+fetch:
+	${_v}test -d ${BASE} || mkdir -p ${BASE}
+	${_v}fetch ${SITE}/MANIFEST -o - | egrep 'base.txz|kernel.txz' > ${BASE}/MANIFEST
+	${_v}test -f ${BASE}/base.txz   || fetch -o ${BASE}/ ${SITE}/base.txz
+	${_v}test -f ${BASE}/kernel.txz || fetch -o ${BASE}/ ${SITE}/kernel.txz
 
 dist:
 	@rsync -Phvricalz mfsbsd-*.img root@f01.koan-ci.com:/www/var/www/koan-ci.com/ipxe/${VERSION}/
@@ -604,7 +612,7 @@ base:
 
 pkg:
 	@rm -rf ./packages ./All
-	@pkg fetch -r FreeBSD -o . -Uyd  \
+	@pkg -R ./customfiles/etc/pkg/ fetch -r FreeBSD -o . -Uyd  \
 		py36-ansible-runner \
 		lang/python3 \
 		devel/git-lite \

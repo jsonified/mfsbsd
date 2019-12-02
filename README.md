@@ -81,6 +81,7 @@ reboot -n -q -l
 
 ```
 sudo make WRKDIR=(mktemp -d -t mfsbsd) BASE=/downloads/BSD/13.0-RELEASE koans
+sudo make V=1 WRKDIR=(mktemp -d -t mfsbsd) BASE=/tmp/12.1-RELEASE koans
 make dist
 ```
 
