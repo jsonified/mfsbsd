@@ -1,7 +1,7 @@
 # /etc/installerconfig
 DISTRIBUTIONS="base.txz kernel.txz"
 BSDINSTALL_DISTDIR=/usr/freebsd-dist
-BSDINSTALL_DISTSITE=https://download.freebsd.org/ftp/releases/amd64/amd64/12.0-RELEASE/
+BSDINSTALL_DISTSITE=https://download.freebsd.org/ftp/releases/amd64/amd64/12.1-RELEASE/
 export ZFSBOOT_VDEV_TYPE=stripe
 export ZFSBOOT_DISKS=da0
 export ZFSBOOT_SWAP_SIZE=2g
@@ -9,7 +9,7 @@ export nonInteractive="YES"
 
 #!/bin/sh
 tee /etc/rc.conf << RCCONF
-hostname="something.koan-ci.com"
+hostname="template.koan-ci.com"
 clear_tmp_enable=YES
 dumpdev=AUTO
 
@@ -27,7 +27,7 @@ ifconfig_DEFAULT="SYNCDHCP mtu 1460"
 ifconfig_vtnet0_ipv6="inet6 accept_rtadv"
 
 cloned_interfaces="${cloned_interfaces} lo1"
-ifconfig_lo1_aliases="inet 10.241.0.0-15/17"
+ifconfig_lo1_aliases="inet 100.64.0.0-15/17"
 
 inetd_enable=NO
 iocell_enable=YES
@@ -85,7 +85,7 @@ server:
   # and then run:
   # /usr/sbin/unbound -c /var/unbound/unbound.conf -dvvvv
   interface: 127.0.0.1
-  interface: 10.241.0.0
+  interface: 100.64.0.0
   username: unbound
   directory: /var/unbound
   chroot: /var/unbound
@@ -106,8 +106,6 @@ mkdir -m 0700 /root/.ssh
 tee /root/.ssh/authorized_keys << KEYS
 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHuuKqa0KEiCFC3Pr5LmWae/ZZfxOQcH9b9jFHLEMC3t ansible@koan-ci.com 20181011
 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAII6IeTZ8APfpZo6GgM44owR4ULmyoPXj2jVT07jNZVs6 root@koan-ci.com 20181011
-ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKBudYUq75fcboPTPb8inxUl5JYw6nfOyfmL9iAEMEb2 dch@koan-ci.com 20180905
-ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEs+nwz72CN8G1ArRsVMyk80z8EWgDwaVKwTUTzMRHVk ley@koan-ci.com
 KEYS
 
 # all the time in the world
@@ -199,9 +197,9 @@ chmod 0750 /usr/local/etc/ansible/facts.d/iocell.fact
 
 # iocell
 iocell activate zroot
-iocell fetch release=12.0-RELEASE ftpfiles='base.txz kernel.txz'
+iocell fetch release=12.1-RELEASE ftpfiles='base.txz kernel.txz'
 # always set these in cloned jails
-ln -s /iocell/releases/12.0-RELEASE/root /template
+ln -s /iocell/releases/12.1-RELEASE/root /template
 tzsetup -s -C /template UTC
 mkdir -p /template/usr/local/etc/
 cp -a /usr/local/etc/pkg /template/usr/local/etc/
@@ -230,20 +228,20 @@ pkg -o ABI=FreeBSD:12:amd64 \
 find /var/cache /template/var/cache -type f -delete
 
 # make a template for later use
-iocell create tag=12.0-KOANS \
+iocell create tag=12.1-KOANS \
   host_hostname=runner.koan-ci.com \
-  release=12.0-RELEASE \
+  release=12.1-RELEASE \
   ip6=disable \
   allow_raw_sockets=0 \
   vnet=off \
   boot=off \
-  resolver='search koan-ci.com;nameserver 10.241.0.0'
+  resolver='search koan-ci.com;nameserver 100.64.0.0'
 
 # revert jail to template
-iocell set istemplate=yes 12.0-KOANS
-touch /iocell/templates/12.0-KOANS/ready
+iocell set istemplate=yes 12.1-KOANS
+touch /iocell/templates/12.1-KOANS/ready
 rm /template
-ln -s /iocell/templates/12.0-KOANS/root /template
+ln -s /iocell/templates/12.1-KOANS/root /template
 
 # update growfs for ZFS support
 curl -#Lo /etc/rc.d/growfs \

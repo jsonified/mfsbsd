@@ -69,8 +69,8 @@ FreeBSD 11.1 OS and this custom iPXE script:
 sysctl kern.geom.debugflags=16
 mount -t tmpfs tmpfs /tmp
 cd /tmp
-fetch --no-verify-peer https://example.org/ipxe/r339417/mfsbsd-12.0-RELEASE-amd64.img
-dd if=mfsbsd-12.0-RELEASE-amd64.img of=/dev/ada0 conv=sync bs=1m
+fetch --no-verify-peer https://example.org/ipxe/r339417/mfsbsd-12.1-RELEASE-amd64.img
+dd if=mfsbsd-12.1-RELEASE-amd64.img of=/dev/ada0 conv=sync bs=1m
 reboot -n -q -l
 ```
 
@@ -79,7 +79,7 @@ reboot -n -q -l
 [koans]
 
 ```
-sudo make WRKDIR=(mktemp -d -t mfsbsd) BASE=/downloads/BSD/12.0-RELEASE koans
+sudo make WRKDIR=(mktemp -d -t mfsbsd) BASE=/downloads/BSD/12.1-RELEASE koans
 make dist
 ```
 
