@@ -6,6 +6,7 @@
 #
 # User-defined variables
 #
+ABI?=			FreeBSD:13:amd64
 ARCH?=			amd64
 VERSION?=		13.0-RELEASE
 SITE?=			https://download.freebsd.org/ftp/releases/${ARCH}/${VERSION}
@@ -612,7 +613,7 @@ base:
 
 pkg:
 	@rm -rf ./packages ./All
-	@pkg -R ./customfiles/etc/pkg/ fetch -r FreeBSD -o . -Uyd  \
+	@pkg -R ./customfiles/etc/pkg/ -o ABI=${ABI} fetch -r FreeBSD -o . -Uyd  \
 		py37-ansible-runner \
 		py37-mitogen \
 		lang/python3 \
