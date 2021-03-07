@@ -599,8 +599,8 @@ fetch:
 	${_v}test -f ${BASE}/kernel.txz || fetch -o ${BASE}/ ${SITE}/kernel.txz
 
 dist:
-	@rsync -Phvricalz mfsbsd-*.img root@f01.koan-ci.com:/www/var/www/koan-ci.com/ipxe/${VERSION}/
-	@rsync -Phvricalz mfsbsd-*.img root@f02.koan-ci.com:/www/var/www/koan-ci.com/ipxe/${VERSION}/
+	@rsync -Phvricalz mfsbsd-*.img root@f01.cabal5.net:/www/var/www/koan-ci.com/ipxe/${VERSION}/
+	@rsync -Phvricalz mfsbsd-*.img root@f02.cabal5.net:/www/var/www/koan-ci.com/ipxe/${VERSION}/
 
 base:
 	@rm -rf ./customfiles/usr/freebsd-dist
@@ -613,13 +613,14 @@ base:
 pkg:
 	@rm -rf ./packages ./All
 	@pkg -R ./customfiles/etc/pkg/ fetch -r FreeBSD -o . -Uyd  \
-		py36-ansible-runner \
+		py37-ansible-runner \
+		py37-mitogen \
 		lang/python3 \
-		devel/git-lite \
+		git-tiny \
 		devel/uclcmd \
 		editors/neovim \
 		ftp/curl \
-		misc/buffer \
+		misc/mbuffer \
 		net-mgmt/riemann-c-client \
 		net/mosh \
 		net/ngrep \
@@ -634,6 +635,7 @@ pkg:
 		sysutils/spiped \
 		sysutils/tmux \
 		sysutils/tree \
-		textproc/jq
+		textproc/jq \
+		www/gurl
 	@mv All packages
 	@rm -rf packages/py2*

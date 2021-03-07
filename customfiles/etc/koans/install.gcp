@@ -9,7 +9,7 @@ export nonInteractive="YES"
 
 #!/bin/sh
 tee /etc/rc.conf << RCCONF
-hostname="template.koan-ci.com"
+hostname="template.cabal5.net"
 clear_tmp_enable=YES
 dumpdev=AUTO
 
@@ -103,9 +103,9 @@ AcceptEnv VAULT_TOKEN
 SSHD
 
 mkdir -m 0700 /root/.ssh
-tee /root/.ssh/authorized_keys << KEYS
-ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHuuKqa0KEiCFC3Pr5LmWae/ZZfxOQcH9b9jFHLEMC3t ansible@koan-ci.com 20181011
-ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAII6IeTZ8APfpZo6GgM44owR4ULmyoPXj2jVT07jNZVs6 root@koan-ci.com 20181011
+tee /root/.ssh/authorized_keys << KEY
+ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJZ0cNlRkFRRleUZhFjIZYJ2p7h7wNWvODGBLEzfSfvr dch@skunkwerks.at 20201124
+ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHuuKqa0KEiCFC3Pr5LmWae/ZZfxOQcH9b9jFHLEMC3t ansible@cabal5.net 20201223
 KEYS
 
 # all the time in the world
