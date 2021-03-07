@@ -1,8 +1,9 @@
 # mfsBSD
 
 Copyright (c) 2018 Martin Matuska <mm at FreeBSD.org>
+Copyright (c) 2019-2021 Dave Cottlehuber ,dch@FreeBSD.org>
 
-Version 2.3
+Version 2.4
 
 ## Description
 
@@ -62,15 +63,15 @@ To prepare your image:
 To deploy your new image, netboot an existing server using iPXE and
 dd your new image in over the top. It should be possible to jump
 directly to the installer from packet.net's systems like so, with a
-FreeBSD 11.1 OS and this custom iPXE script:
+FreeBSD 13.0 OS and this custom iPXE script:
 
 ```
 #!/bin/sh
 sysctl kern.geom.debugflags=16
 mount -t tmpfs tmpfs /tmp
 cd /tmp
-fetch --no-verify-peer https://example.org/ipxe/r339417/mfsbsd-12.1-RELEASE-amd64.img
-dd if=mfsbsd-12.1-RELEASE-amd64.img of=/dev/ada0 conv=sync bs=1m
+fetch --no-verify-peer https://example.org/ipxe/r.../mfsbsd-13.0-RELEASE-amd64.img
+dd if=mfsbsd-13.0-RELEASE-amd64.img of=/dev/ada0 conv=sync bs=1m
 reboot -n -q -l
 ```
 
@@ -79,7 +80,7 @@ reboot -n -q -l
 [koans]
 
 ```
-sudo make WRKDIR=(mktemp -d -t mfsbsd) BASE=/downloads/BSD/12.1-RELEASE koans
+sudo make WRKDIR=(mktemp -d -t mfsbsd) BASE=/downloads/BSD/13.0-RELEASE koans
 make dist
 ```
 

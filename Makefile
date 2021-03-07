@@ -6,7 +6,7 @@
 #
 # User-defined variables
 #
-VERSION?=		12.1-RELEASE
+VERSION?=		13.0-RELEASE
 BASE?=			/cdrom/usr/freebsd-dist
 KERNCONF?=		GENERIC
 MFSROOT_FREE_INODES?=	10%

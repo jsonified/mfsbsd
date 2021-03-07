@@ -1,10 +1,10 @@
 # /etc/installerconfig
 DISTRIBUTIONS="base.txz kernel.txz"
 BSDINSTALL_DISTDIR=/usr/freebsd-dist
-BSDINSTALL_DISTSITE=https://download.freebsd.org/ftp/releases/amd64/amd64/12.1-RELEASE/
+BSDINSTALL_DISTSITE=https://download.freebsd.org/ftp/releases/amd64/amd64/13.0-RELEASE/
 export ZFSBOOT_VDEV_TYPE=stripe
 export ZFSBOOT_DISKS=da0
-export ZFSBOOT_SWAP_SIZE=2g
+export ZFSBOOT_SWAP_SIZE=4g
 export nonInteractive="YES"
 
 #!/bin/sh
@@ -197,9 +197,9 @@ chmod 0750 /usr/local/etc/ansible/facts.d/iocell.fact
 
 # iocell
 iocell activate zroot
-iocell fetch release=12.1-RELEASE ftpfiles='base.txz kernel.txz'
+iocell fetch release=13.0-RELEASE ftpfiles='base.txz kernel.txz'
 # always set these in cloned jails
-ln -s /iocell/releases/12.1-RELEASE/root /template
+ln -s /iocell/releases/13.0-RELEASE/root /template
 tzsetup -s -C /template UTC
 mkdir -p /template/usr/local/etc/
 cp -a /usr/local/etc/pkg /template/usr/local/etc/
@@ -219,7 +219,7 @@ syslogd_enable=NO
 TEMPL_RCCONF
 
 # inject packages
-pkg -o ABI=FreeBSD:12:amd64 \
+pkg -o ABI=FreeBSD:13:amd64 \
     --chroot /template \
     --config /usr/local/etc/pkg/repos/FreeBSD.conf \
     install -y $(pkg prime-origins)
@@ -228,9 +228,9 @@ pkg -o ABI=FreeBSD:12:amd64 \
 find /var/cache /template/var/cache -type f -delete
 
 # make a template for later use
-iocell create tag=12.1-KOANS \
+iocell create tag=13.0-KOANS \
   host_hostname=runner.koan-ci.com \
-  release=12.1-RELEASE \
+  release=13.0-RELEASE \
   ip6=disable \
   allow_raw_sockets=0 \
   vnet=off \
@@ -238,14 +238,14 @@ iocell create tag=12.1-KOANS \
   resolver='search koan-ci.com;nameserver 100.64.0.0'
 
 # revert jail to template
-iocell set istemplate=yes 12.1-KOANS
-touch /iocell/templates/12.1-KOANS/ready
+iocell set istemplate=yes 13.0-KOANS
+touch /iocell/templates/13.0-KOANS/ready
 rm /template
-ln -s /iocell/templates/12.1-KOANS/root /template
+ln -s /iocell/templates/13.0-KOANS/root /template
 
 # update growfs for ZFS support
-curl -#Lo /etc/rc.d/growfs \
-    https://svnweb.freebsd.org/base/stable/12/libexec/rc/rc.d/growfs\?view\=co
+#curl -#Lo /etc/rc.d/growfs \
+#    https://svnweb.freebsd.org/base/stable/12/libexec/rc/rc.d/growfs\?view\=co
 
 # finalise filesystems
 tee -a /etc/fstab << FSTAB
